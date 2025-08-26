@@ -1,0 +1,21 @@
+{
+  "name": "TechFlow - 科技英语悦读",
+  "short_name": "TechFlow",
+  "description": "在阅读前沿科技资讯的同时提升英语水平",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#ffffff",
+  "theme_color": "#1976d2",
+  "orientation": "portrait-primary",
+  "icons": [
+    {
+      "src": "/vite.svg",
+      "sizes": "any",
+      "type": "image/svg+xml",
+      "purpose": "any maskable"
+    }
+  ],
+  "categories": ["education", "news", "productivity"],
+  "lang": "zh-CN",
+  "scope": "/"
+}

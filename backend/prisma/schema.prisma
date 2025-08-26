@@ -1,0 +1,212 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "sqlite"
+  url      = env("DATABASE_URL")
+}
+
+// 用户表
+model User {
+  id            String   @id @default(cuid())
+  email         String   @unique
+  passwordHash  String   @map("password_hash")
+  username      String?  @unique
+  avatar        String?
+  createdAt     DateTime @default(now()) @map("created_at")
+  updatedAt     DateTime @updatedAt @map("updated_at")
+  
+  // 关联关系
+  vocabulary       UserVocabulary[]
+  newsSources      UserNewsSource[]
+  settings         UserSettings?
+  wordQueryHistory WordQueryHistory[]
+  
+  @@map("users")
+}
+
+// 新闻源表
+model NewsSource {
+  id          String   @id @default(cuid())
+  name        String
+  url         String
+  sourceType  String   @default("rss") @map("source_type") // "rss" | "api"
+  contentType String   @default("media") @map("content_type") // "text" | "media"
+  isDefault   Boolean  @default(false) @map("is_default")
+  isActive    Boolean  @default(true) @map("is_active")
+  description String?
+  category    String?  // "tech", "ai", "startup" etc.
+  language    String   @default("en")
+  createdAt   DateTime @default(now()) @map("created_at")
+  updatedAt   DateTime @updatedAt @map("updated_at")
+  
+  // 关联关系
+  articles    Article[]
+  users       UserNewsSource[]
+  
+  @@map("news_sources")
+}
+
+// 用户新闻源关联表
+model UserNewsSource {
+  userId        String  @map("user_id")
+  sourceId      String  @map("source_id")
+  isEnabled     Boolean @default(true) @map("is_enabled")
+  autoTranslate Boolean @default(false) @map("auto_translate") // 用户对此源是否开启自动翻译
+  createdAt     DateTime @default(now()) @map("created_at")
+  updatedAt     DateTime @updatedAt @map("updated_at")
+  
+  user   User       @relation(fields: [userId], references: [id], onDelete: Cascade)
+  source NewsSource @relation(fields: [sourceId], references: [id], onDelete: Cascade)
+  
+  @@id([userId, sourceId])
+  @@map("user_news_sources")
+}
+
+// 文章表
+model Article {
+  id           String    @id @default(cuid())
+  sourceId     String    @map("source_id")
+  titleEn      String    @map("title_en")
+  titleCn      String?   @map("title_cn")  // 缓存的中文标题
+  contentHtml  String    @map("content_html")
+  originalUrl  String    @map("original_url")
+  imageUrl     String?   @map("image_url")
+  author       String?
+  summary      String?
+  publishedAt  DateTime  @map("published_at")
+  createdAt    DateTime  @default(now()) @map("created_at")
+  updatedAt    DateTime  @updatedAt @map("updated_at")
+  
+  // 关联关系
+  source NewsSource @relation(fields: [sourceId], references: [id], onDelete: Cascade)
+  vocabularyWords UserVocabulary[]
+  
+  @@unique([sourceId, originalUrl])
+  @@index([publishedAt])
+  @@index([sourceId])
+  @@map("articles")
+}
+
+// 用户生词表
+model UserVocabulary {
+  id        String   @id @default(cuid())
+  userId    String   @map("user_id")
+  word      String
+  context   String?  // 单词上下文
+  articleId String?  @map("article_id") // 关联的文章ID
+  status    String   @default("new") // "new", "learning", "mastered"
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+  
+  // 学习统计
+  reviewCount    Int @default(0) @map("review_count")
+  correctCount   Int @default(0) @map("correct_count")
+  lastReviewedAt DateTime? @map("last_reviewed_at")
+  nextReviewAt   DateTime? @map("next_review_at")
+  
+  // 关联关系
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+  article Article? @relation(fields: [articleId], references: [id], onDelete: SetNull)
+  
+  @@unique([userId, word])
+  @@index([userId, status])
+  @@index([articleId])
+  @@map("user_vocabulary")
+}
+
+// 全局单词释义缓存表
+model WordDefinition {
+  id             String   @id @default(cuid())
+  word           String   @unique
+  definitionJson String   @map("definition_json") // 存储完整的释义数据(JSON字符串)
+  sourceLlm      String   @map("source_llm")      // 记录来源LLM
+  createdAt      DateTime @default(now()) @map("created_at")
+  updatedAt      DateTime @updatedAt @map("updated_at")
+  
+  // 关联关系
+  wordQueryHistory WordQueryHistory[]
+  
+  @@index([word])
+  @@map("word_definitions")
+}
+
+// 用户设置表
+model UserSettings {
+  userId        String  @id @map("user_id")
+  llmProvider         String?  @map("llm_provider")
+  llmApiKey           String?  @map("llm_api_key")
+  llmBaseUrl          String?  @map("llm_base_url")
+  llmModel            String?  @map("llm_model")
+  maxTokens           Int?     @map("max_tokens")     // 最大token数
+  temperature         Float?   @map("temperature")    // 温度参数
+  theme               String   @default("light")      // "light", "dark", "auto"
+  language            String   @default("zh-CN")      // 界面语言
+  fontSize            String   @default("medium") @map("font_size")      // 字号大小
+  autoTranslate       Boolean  @default(false) @map("auto_translate")   // 自动翻译标题
+  showPhonetic        Boolean  @default(true) @map("show_phonetic")     // 显示音标
+  enableNotifications Boolean  @default(false) @map("enable_notifications") // 启用通知
+  translationLanguage String   @default("zh-CN") @map("translation_language") // 翻译语言
+  autoHighlight       Boolean  @default(true) @map("auto_highlight") // 是否自动高亮生词
+  createdAt     DateTime @default(now()) @map("created_at")
+  updatedAt     DateTime @updatedAt @map("updated_at")
+  
+  // 关联关系
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+  
+  @@map("user_settings")
+}
+
+// 标题翻译缓存表
+model TitleTranslation {
+  id              Int      @id @default(autoincrement())
+  originalTitle   String   @unique
+  translatedTitle String
+  language        String   @default("zh-CN")
+  createdAt       DateTime @default(now())
+
+  @@map("title_translations")
+}
+
+model SentenceTranslation {
+  id                 Int      @id @default(autoincrement())
+  originalSentence   String   @unique
+  translatedSentence String
+  language           String   @default("zh-CN")
+  createdAt          DateTime @default(now())
+
+  @@map("sentence_translations")
+}
+
+model WordQueryHistory {
+  id               Int            @id @default(autoincrement())
+  userId           String
+  wordDefinitionId String
+  context          String?
+  createdAt        DateTime       @default(now())
+
+  user           User           @relation(fields: [userId], references: [id], onDelete: Cascade)
+  wordDefinition WordDefinition @relation(fields: [wordDefinitionId], references: [id], onDelete: Cascade)
+
+  @@map("word_query_history")
+}
+
+// 系统设置表
+model SystemSettings {
+  id              String   @id @default("system")
+  llmProvider     String?  @map("llm_provider")
+  llmApiKey       String?  @map("llm_api_key")
+  llmBaseUrl      String?  @map("llm_base_url")
+  llmModel        String?  @map("llm_model")
+  maxTokens       Int?     @map("max_tokens")
+  temperature     Float?   @map("temperature")
+  autoTranslate   Boolean  @default(true) @map("auto_translate") // 系统默认是否翻译
+  createdAt       DateTime @default(now()) @map("created_at")
+  updatedAt       DateTime @updatedAt @map("updated_at")
+  
+  @@map("system_settings")
+}
