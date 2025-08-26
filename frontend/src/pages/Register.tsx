@@ -164,7 +164,7 @@ const Register: React.FC = () => {
           {/* Logo和标题 */}
           <Box sx={{ mb: 4, textAlign: 'center' }}>
             <img 
-              src="/src/assets/logo.svg" 
+              src="/logo.svg" 
               alt="TechFlow Logo" 
               style={{ height: '60px', width: 'auto', marginBottom: '16px' }}
             />

@@ -115,9 +115,9 @@ const Login: React.FC = () => {
           {/* Logo和标题 */}
           <Box sx={{ mb: 4, textAlign: 'center' }}>
             <img 
-              src="/src/assets/logo.svg" 
+              src="/logo.svg" 
               alt="TechFlow Logo" 
-              style={{ height: '60px', width: 'auto', marginBottom: '16px' }}
+              style={{ height: '100px', width: 'auto', marginBottom: '16px' }}
             />
             <Typography variant="body1" color="text.secondary">
               登录您的账户
@@ -238,24 +238,12 @@ const Login: React.FC = () => {
             </Box>
           </Box>
 
-          {/* 演示账户提示 */}
-          <Box sx={{ mt: 4, p: 2, bgcolor: 'grey.50', borderRadius: 1, width: '100%' }}>
-            <Typography variant="body2" color="text.secondary" align="center">
-              演示账户
-            </Typography>
-            <Typography variant="body2" align="center" sx={{ mt: 1 }}>
-              邮箱: demo@techflow.com
-            </Typography>
-            <Typography variant="body2" align="center">
-              密码: demo123
-            </Typography>
-          </Box>
         </Paper>
 
         {/* 页脚 */}
         <Box sx={{ mt: 4, textAlign: 'center' }}>
           <Typography variant="body2" color="text.secondary">
-            © 2024 TechFlow. 智能英语阅读助手
+            © 2025 TechFlow. 智能英语阅读助手
           </Typography>
         </Box>
       </Box>

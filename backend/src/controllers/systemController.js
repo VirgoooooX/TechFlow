@@ -56,8 +56,8 @@ class SystemController {
         autoTranslate
       } = req.body;
 
-      // 验证必要字段
-      if (llmProvider && !llmApiKey) {
+      // 验证必要字段 - 只有当llmProvider不为空且llmApiKey为空字符串时才报错
+      if (llmProvider && llmApiKey === '') {
         return res.status(400).json({
           success: false,
           message: '配置LLM提供商时必须提供API密钥'

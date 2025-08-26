@@ -60,7 +60,7 @@ const Layout: React.FC = () => {
       <Toolbar>
         <Box sx={{ display: 'flex', alignItems: 'center', cursor: 'pointer' }} onClick={() => handleNavigation('/')}>
           <img 
-            src="/src/assets/logo.svg" 
+            src="/logo.svg" 
             alt="TechFlow Logo" 
             style={{ height: '80px', width: 'auto' }}
           />

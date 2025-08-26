@@ -23,7 +23,19 @@ const app = express();
 const PORT = process.env.PORT || 3001;
 
 // 安全中间件
-app.use(helmet());
+app.use(helmet({
+  contentSecurityPolicy: {
+    directives: {
+      defaultSrc: ["'self'"],
+      scriptSrc: ["'self'", "'unsafe-inline'", "'unsafe-eval'"],
+      styleSrc: ["'self'", "'unsafe-inline'", "https://fonts.googleapis.com"],
+      fontSrc: ["'self'", "https://fonts.gstatic.com"],
+      imgSrc: ["'self'", "data:", "https:", "http:", "*.techcrunch.com", "techcrunch.com", "https://techcrunch.com", "https://*.techcrunch.com", "*.slashdot.org", "slashdot.org", "https://slashdot.org", "https://*.slashdot.org", "*.rsshub.app", "rsshub.app", "https://rsshub.app", "https://*.rsshub.app"],
+      connectSrc: ["'self'", "http://localhost:3001", "ws://localhost:3000"],
+      frameAncestors: ["'self'"]
+    }
+  }
+}));
 
 // CORS 配置
 app.use(cors({
@@ -58,6 +70,71 @@ app.get('/health', (req, res) => {
     timestamp: new Date().toISOString(),
     uptime: process.uptime()
   });
+});
+
+// 图片代理路由
+app.get('/api/proxy/image', async (req, res) => {
+  try {
+    const { url } = req.query;
+    if (!url) {
+      return res.status(400).json({ error: 'URL parameter is required' });
+    }
+
+    // 验证URL格式
+    let imageUrl;
+    try {
+      imageUrl = new URL(url);
+    } catch (error) {
+      return res.status(400).json({ error: 'Invalid URL format' });
+    }
+
+    // 只允许代理特定域名的图片
+    const allowedDomains = [
+      'techcrunch.com',
+      'slashdot.org',
+      'rsshub.app',
+      'unsplash.com',
+      'images.unsplash.com'
+    ];
+    
+    const isAllowed = allowedDomains.some(domain => 
+      imageUrl.hostname === domain || imageUrl.hostname.endsWith('.' + domain)
+    );
+    
+    if (!isAllowed) {
+      return res.status(403).json({ error: 'Domain not allowed' });
+    }
+
+    // 代理图片请求
+    const response = await fetch(url, {
+      headers: {
+        'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36'
+      }
+    });
+
+    if (!response.ok) {
+      return res.status(response.status).json({ error: 'Failed to fetch image' });
+    }
+
+    // 设置响应头
+    const contentType = response.headers.get('content-type');
+    if (contentType && contentType.startsWith('image/')) {
+      res.set('Content-Type', contentType);
+      res.set('Cache-Control', 'public, max-age=86400'); // 缓存24小时
+      res.set('Access-Control-Allow-Origin', '*'); // 允许跨域访问图片
+      res.set('Access-Control-Allow-Methods', 'GET');
+      res.set('Access-Control-Allow-Headers', 'Content-Type');
+      
+      // 获取图片数据并发送
+      const buffer = await response.arrayBuffer();
+      res.send(Buffer.from(buffer));
+    } else {
+      res.status(400).json({ error: 'URL does not point to an image' });
+    }
+  } catch (error) {
+    logger.error('Image proxy error:', error);
+    res.status(500).json({ error: 'Internal server error' });
+  }
 });
 
 // API 路由

@@ -13,6 +13,10 @@ RUN npm ci --no-audit --no-fund && npm cache clean --force
 # 复制前端源码
 COPY frontend/ ./
 
+# 设置构建时环境变量
+ARG VITE_API_BASE_URL=http://localhost:3000
+ENV VITE_API_BASE_URL=$VITE_API_BASE_URL
+
 # 构建前端应用
 RUN npm run build
 
@@ -51,12 +55,18 @@ COPY --from=backend-deps --chown=nodejs:nodejs /app/prisma ./prisma
 COPY --chown=nodejs:nodejs backend/server.js ./
 COPY --chown=nodejs:nodejs backend/src ./src/
 COPY --chown=nodejs:nodejs backend/package.json ./
+COPY --chown=nodejs:nodejs backend/start.sh ./start.sh
 
-# 从前端构建阶段复制构建产物
+# 从前端构建阶段复制构建产物和静态资源
 COPY --from=frontend-builder --chown=nodejs:nodejs /app/frontend/dist ./public
+COPY --from=frontend-builder --chown=nodejs:nodejs /app/frontend/public/favicon.svg ./public/
+COPY --from=frontend-builder --chown=nodejs:nodejs /app/frontend/public/logo.svg ./public/
+COPY --from=frontend-builder --chown=nodejs:nodejs /app/frontend/public/manifest.json ./public/
+COPY --from=frontend-builder --chown=nodejs:nodejs /app/frontend/public/vite.svg ./public/
 
-# 创建数据库和日志目录
-RUN mkdir -p /app/data /app/logs && chown -R nodejs:nodejs /app/data /app/logs
+# 创建数据库和日志目录，设置启动脚本权限
+RUN mkdir -p /app/data /app/logs && chown -R nodejs:nodejs /app/data /app/logs && \
+    chmod +x /app/start.sh
 
 # 设置环境变量
 ENV NODE_ENV=production \
@@ -72,4 +82,4 @@ EXPOSE 3000
 
 # 使用dumb-init作为PID 1进程
 ENTRYPOINT ["dumb-init", "--"]
-CMD ["sh", "-c", "npx prisma migrate deploy && node server.js"]
+CMD ["./start.sh"]
