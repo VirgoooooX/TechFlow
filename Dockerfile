@@ -56,6 +56,7 @@ COPY --chown=nodejs:nodejs backend/server.js ./
 COPY --chown=nodejs:nodejs backend/src ./src/
 COPY --chown=nodejs:nodejs backend/package.json ./
 COPY --chown=nodejs:nodejs backend/start.sh ./start.sh
+COPY --chown=nodejs:nodejs backend/ecdict.csv ./ecdict.csv
 
 # 从前端构建阶段复制构建产物和静态资源
 COPY --from=frontend-builder --chown=nodejs:nodejs /app/frontend/dist ./public

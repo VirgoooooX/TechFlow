@@ -24,6 +24,7 @@ const PORT = process.env.PORT || 3001;
 
 // 安全中间件
 app.use(helmet({
+  hsts: false, // 禁用 HSTS
   contentSecurityPolicy: {
     directives: {
       defaultSrc: ["'self'"],
@@ -169,7 +170,7 @@ if (process.env.NODE_ENV === 'production') {
 app.use(errorHandler);
 
 // 启动服务器
-app.listen(PORT, () => {
+app.listen(PORT, '0.0.0.0', () => {
   logger.info(`🚀 TechFlow Backend Server running on port ${PORT}`);
   logger.info(`📝 Environment: ${process.env.NODE_ENV || 'development'}`);
   

@@ -4,13 +4,13 @@ services:
   techflow:
     image: virgoooox/techflow:latest
     ports:
-      - "3000:3000"
+      - "0.0.0.0:3000:3000"
     environment:
       - NODE_ENV=production
       - DATABASE_URL=file:/app/data/database.db
       - JWT_SECRET=hy3L0JFjIOOg6Od6Q66cL2fMAPYu3l
       - JWT_EXPIRES_IN=7d
-      - VITE_API_BASE_URL=http://localhost:3000
+      - VITE_API_BASE_URL=/api
     volumes:
       - ./data:/app/data
       - ./logs:/app/logs
