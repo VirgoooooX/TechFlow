@@ -48,7 +48,7 @@ import {
 } from '@mui/icons-material';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { useAuth } from '../hooks/useAuth';
-import { userApi, articlesApi, systemApi } from '../services/api';
+import { userApi, systemApi, authApi, articlesApi } from '../services/api';
 import { useTheme } from '../contexts/ThemeContext';
 import { useFontSize } from '../contexts/FontSizeContext';
 import { useNavigate } from 'react-router-dom';
@@ -105,6 +105,13 @@ const Settings: React.FC = () => {
   const [snackbarMessage, setSnackbarMessage] = useState('');
   const [testDialogOpen, setTestDialogOpen] = useState(false);
   const [sourceDialogOpen, setSourceDialogOpen] = useState(false);
+  const [changePasswordDialogOpen, setChangePasswordDialogOpen] = useState(false);
+  const [passwordForm, setPasswordForm] = useState({
+    currentPassword: '',
+    newPassword: '',
+    confirmPassword: ''
+  });
+  const [passwordErrors, setPasswordErrors] = useState<{[key: string]: string}>({});
   
   // 折叠状态管理
   const [expandedCards, setExpandedCards] = useState<{[key: string]: boolean}>({
@@ -333,7 +340,7 @@ const Settings: React.FC = () => {
   // 手动刷新新闻
   const { mutate: refreshNews, isPending: isRefreshing } = useMutation({
     mutationFn: () => articlesApi.refreshNews(),
-    onSuccess: (data) => {
+    onSuccess: (data: any) => {
       setSnackbarMessage(`刷新完成！获取了 ${data.data.totalArticles} 篇新文章`);
       setSnackbarOpen(true);
       // 刷新文章列表
@@ -371,6 +378,78 @@ const Settings: React.FC = () => {
   const handleLogout = () => {
     dispatch(logoutAction());
     navigate('/login');
+  };
+
+  const showSnackbar = (message: string) => {
+    setSnackbarMessage(message);
+    setSnackbarOpen(true);
+  };
+
+  // 修改密码相关函数
+  const handlePasswordFormChange = (field: string, value: string) => {
+    setPasswordForm(prev => ({ ...prev, [field]: value }));
+    // 清除对应字段的错误
+    if (passwordErrors[field]) {
+      setPasswordErrors(prev => ({ ...prev, [field]: '' }));
+    }
+  };
+
+  const validatePasswordForm = () => {
+    const errors: {[key: string]: string} = {};
+    
+    if (!passwordForm.currentPassword) {
+      errors.currentPassword = '请输入当前密码';
+    }
+    
+    if (!passwordForm.newPassword) {
+      errors.newPassword = '请输入新密码';
+    } else if (passwordForm.newPassword.length < 6) {
+      errors.newPassword = '新密码至少需要6个字符';
+    }
+    
+    if (!passwordForm.confirmPassword) {
+      errors.confirmPassword = '请确认新密码';
+    } else if (passwordForm.newPassword !== passwordForm.confirmPassword) {
+      errors.confirmPassword = '两次输入的密码不一致';
+    }
+    
+    setPasswordErrors(errors);
+    return Object.keys(errors).length === 0;
+  };
+
+  const handleChangePassword = async () => {
+    if (!validatePasswordForm()) {
+      return;
+    }
+    
+    try {
+       await authApi.changePassword({
+         currentPassword: passwordForm.currentPassword,
+         newPassword: passwordForm.newPassword
+       });
+      
+      showSnackbar('密码修改成功');
+      setChangePasswordDialogOpen(false);
+      setPasswordForm({
+        currentPassword: '',
+        newPassword: '',
+        confirmPassword: ''
+      });
+      setPasswordErrors({});
+    } catch (error: any) {
+      const errorMessage = error.response?.data?.message || '密码修改失败';
+      showSnackbar(errorMessage);
+    }
+  };
+
+  const handleClosePasswordDialog = () => {
+    setChangePasswordDialogOpen(false);
+    setPasswordForm({
+      currentPassword: '',
+      newPassword: '',
+      confirmPassword: ''
+    });
+    setPasswordErrors({});
   };
 
   const handleTestLLM = () => {
@@ -1086,7 +1165,11 @@ const Settings: React.FC = () => {
                 <Typography variant="body1" gutterBottom>
                   邮箱: {user.email}
                 </Typography>
-                <Button variant="outlined" sx={{ mt: 2 }}>
+                <Button 
+                  variant="outlined" 
+                  sx={{ mt: 2 }}
+                  onClick={() => setChangePasswordDialogOpen(true)}
+                >
                   修改密码
                 </Button>
               </Grid>
@@ -1208,6 +1291,61 @@ const Settings: React.FC = () => {
             disabled={isAddingSource || !newSource.name || !newSource.url || !newSource.category || !newSource.sourceType || !newSource.contentType}
           >
             {isAddingSource ? <CircularProgress size={20} /> : '添加'}
+          </Button>
+        </DialogActions>
+      </Dialog>
+
+      {/* 修改密码对话框 */}
+      <Dialog
+        open={changePasswordDialogOpen}
+        onClose={handleClosePasswordDialog}
+        maxWidth="sm"
+        fullWidth
+        disableAutoFocus
+        disableEnforceFocus
+        disableRestoreFocus
+      >
+        <DialogTitle>修改密码</DialogTitle>
+        <DialogContent>
+          <TextField
+            fullWidth
+            label="当前密码"
+            type="password"
+            value={passwordForm.currentPassword}
+            onChange={(e) => handlePasswordFormChange('currentPassword', e.target.value)}
+            error={!!passwordErrors.currentPassword}
+            helperText={passwordErrors.currentPassword}
+            sx={{ mb: 2, mt: 1 }}
+          />
+          <TextField
+            fullWidth
+            label="新密码"
+            type="password"
+            value={passwordForm.newPassword}
+            onChange={(e) => handlePasswordFormChange('newPassword', e.target.value)}
+            error={!!passwordErrors.newPassword}
+            helperText={passwordErrors.newPassword}
+            sx={{ mb: 2 }}
+          />
+          <TextField
+            fullWidth
+            label="确认新密码"
+            type="password"
+            value={passwordForm.confirmPassword}
+            onChange={(e) => handlePasswordFormChange('confirmPassword', e.target.value)}
+            error={!!passwordErrors.confirmPassword}
+            helperText={passwordErrors.confirmPassword}
+          />
+        </DialogContent>
+        <DialogActions>
+          <Button onClick={handleClosePasswordDialog}>
+            取消
+          </Button>
+          <Button
+            variant="contained"
+            onClick={handleChangePassword}
+          >
+            确认修改
           </Button>
         </DialogActions>
       </Dialog>

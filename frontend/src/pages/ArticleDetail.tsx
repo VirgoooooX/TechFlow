@@ -196,44 +196,71 @@ const ArticleDetail: React.FC = () => {
             sx={{ objectFit: 'cover' }}
           />
         )}
-        <CardContent sx={{ p: 3 }}>
-          {/* 文章元信息 */}
-          <Box sx={{ mb: 3 }}>
-            <Stack direction="row" spacing={1} sx={{ mb: 2 }}>
-              {article.source && (
-                <>
-                  <Chip
-                    label={article.source.name}
-                    color="primary"
-                    variant="outlined"
-                  />
-                  {article.source.category && (
-                    <Chip label={article.source.category} />
-                  )}
-                </>
-              )}
+        <CardContent sx={{ p: { xs: 2, md: 3 } }}>
+          {/* 文章元信息 - 标签和时间合并到一行 */}
+          <Box sx={{ mb: 2 }}>
+            <Stack 
+              direction="row" 
+              spacing={2} 
+              sx={{ 
+                mb: 1.5,
+                alignItems: "center",
+                justifyContent: "space-between"
+              }}
+            >
+              {/* 标签组 */}
+              <Stack direction="row" spacing={1}>
+                {article.source && (
+                  <>
+                    <Chip
+                      label={article.source.name}
+                      color="primary"
+                      variant="outlined"
+                      size="small"
+                      sx={{ fontSize: '0.75rem', height: 24 }}
+                    />
+                    {article.source.category && (
+                      <Chip 
+                        label={article.source.category} 
+                        size="small"
+                        sx={{ fontSize: '0.75rem', height: 24 }}
+                      />
+                    )}
+                  </>
+                )}
+              </Stack>
+              
+              {/* 时间信息 */}
+              <Typography 
+                variant="body2" 
+                color="text.secondary"
+                sx={{ 
+                  fontSize: '0.8rem',
+                  whiteSpace: 'nowrap'
+                }}
+              >
+                {formatTime(article.publishedAt)}
+                {article.author && ` • ${article.author}`}
+              </Typography>
             </Stack>
-            
-            <Typography variant="body2" color="text.secondary">
-              {formatTime(article.publishedAt)}
-              {article.author && ` • ${article.author}`}
-            </Typography>
           </Box>
 
-          {/* 文章标题 */}
+          {/* 文章标题 - 统一使用紧凑字体 */}
           <Typography 
             variant="h4" 
             component="h1" 
             gutterBottom
             sx={{
-              fontSize: fontSize === 'small' ? '1.8rem' : fontSize === 'large' ? '2.4rem' : '2.125rem'
+              fontSize: fontSize === 'small' ? '1.4rem' : fontSize === 'large' ? '1.8rem' : '1.6rem',
+              lineHeight: 1.3,
+              mb: 1
             }}
           >
             {article.titleEn}
             <IconButton
               size="small"
               onClick={() => handleSpeak(article.titleEn)}
-              sx={{ ml: 1 }}
+              sx={{ ml: 1, p: 0.5 }}
             >
               <VolumeIcon fontSize="small" />
             </IconButton>
@@ -246,31 +273,48 @@ const ArticleDetail: React.FC = () => {
               gutterBottom
               sx={{ 
                 fontWeight: 400,
-                fontSize: fontSize === 'small' ? '1rem' : fontSize === 'large' ? '1.4rem' : '1.25rem'
+                fontSize: fontSize === 'small' ? '0.9rem' : fontSize === 'large' ? '1.1rem' : '1rem',
+                mb: 1.5
               }}
             >
               {article.titleCn}
             </Typography>
           )}
 
-          {/* 操作按钮 */}
-          <Stack direction="row" spacing={1} sx={{ mt: 3 }}>
-            <Button
-              variant="outlined"
-              startIcon={<ShareIcon />}
+          {/* 操作按钮 - 统一使用紧凑的图标按钮 */}
+          <Stack 
+            direction="row" 
+            spacing={0.5} 
+            sx={{ 
+              mt: 1.5,
+              justifyContent: 'flex-end'
+            }}
+          >
+            <IconButton
+              size="small"
               onClick={handleShare}
+              sx={{ 
+                border: '1px solid',
+                borderColor: 'divider',
+                borderRadius: 1
+              }}
             >
-              分享
-            </Button>
-            <Button
-              variant="outlined"
-              startIcon={<LanguageIcon />}
+              <ShareIcon fontSize="small" />
+            </IconButton>
+            <IconButton
+              size="small"
               href={article.url}
               target="_blank"
               rel="noopener noreferrer"
+              component="a"
+              sx={{ 
+                border: '1px solid',
+                borderColor: 'divider',
+                borderRadius: 1
+              }}
             >
-              原文
-            </Button>
+              <LanguageIcon fontSize="small" />
+            </IconButton>
           </Stack>
         </CardContent>
       </Card>

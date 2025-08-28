@@ -67,13 +67,15 @@ const MobileDock: React.FC = () => {
         showLabels
         sx={{
           height: 64,
+          minHeight: 64,
           '& .MuiBottomNavigationAction-root': {
             minWidth: 'auto',
-            padding: '6px 12px 8px',
+            padding: '8px 12px',
+            minHeight: 'auto',
           },
           '& .MuiBottomNavigationAction-label': {
             fontSize: '0.75rem',
-            marginTop: '4px',
+            marginTop: '2px',
             opacity: '1 !important',
             transform: 'none !important',
           },

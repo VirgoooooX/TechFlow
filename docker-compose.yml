@@ -1,17 +1,91 @@
+# Docker Compose 配置文件版本
+# 使用 3.8 版本，支持健康检查和服务依赖等高级功能
 version: '3.8'
 
 services:
-  techflow:
-    image: virgoooox/techflow:latest
+  # ================================
+  # 后端服务配置 (Node.js + Express)
+  # ================================
+  backend:
+    # 使用优化后的后端镜像，基于 Alpine Linux，体积更小
+    image: virgoooox/techflow-backend:latest
+    # 容器名称，便于管理和日志查看
+    container_name: techflow-backend
+    # 端口映射：主机端口3001 -> 容器端口3001
     ports:
-      - "0.0.0.0:3000:3000"
+      - "3001:3001"
+    # 环境变量配置
     environment:
+      # Node.js 运行环境，设置为生产模式
       - NODE_ENV=production
+      # 应用监听端口
+      - PORT=3001
+      # SQLite 数据库文件路径，映射到容器内的 /app/data 目录
       - DATABASE_URL=file:/app/data/database.db
-      - JWT_SECRET=hy3L0JFjIOOg6Od6Q66cL2fMAPYu3l
-      - JWT_EXPIRES_IN=7d
-      - VITE_API_BASE_URL=/api
+      # JWT 访问令牌密钥，支持环境变量覆盖，默认值仅用于开发
+      - JWT_SECRET=${JWT_SECRET:-your-jwt-secret-key}
+      # JWT 刷新令牌密钥，用于令牌续期功能
+      - JWT_REFRESH_SECRET=${JWT_REFRESH_SECRET:-your-jwt-refresh-secret}
+      # 前端应用地址，用于 CORS 配置
+      - FRONTEND_URL=http://localhost:3000
+    # 数据卷挂载：将主机 ./data 目录挂载到容器 /app/data
+    # 用于持久化 SQLite 数据库文件
     volumes:
       - ./data:/app/data
-      - ./logs:/app/logs
+    # 网络配置：加入自定义网络，实现服务间通信
+    networks:
+      - techflow-network
+    # 重启策略：除非手动停止，否则总是重启
     restart: unless-stopped
+    # 健康检查配置：确保服务正常运行后再启动依赖服务
+    healthcheck:
+      # 检查命令：访问健康检查端点，返回200表示健康
+      test: ["CMD", "node", "-e", "require('http').get('http://127.0.0.1:3001/health', (res) => { process.exit(res.statusCode === 200 ? 0 : 1) }).on('error', () => process.exit(1))"]
+      # 检查间隔：每30秒检查一次
+      interval: 30s
+      # 超时时间：单次检查最多等待10秒
+      timeout: 10s
+      # 重试次数：连续失败3次才认为不健康
+      retries: 3
+      # 启动等待期：容器启动后等待40秒再开始健康检查
+      start_period: 40s
+
+  # ================================
+  # 前端服务配置 (React + Nginx)
+  # ================================
+  frontend:
+    # 前端镜像，包含构建好的 React 应用和 Nginx 服务器
+    image: virgoooox/techflow-frontend
+    # 容器名称
+    container_name: techflow-frontend
+    # 端口映射：主机端口3000 -> 容器端口80 (Nginx默认端口)
+    ports:
+      - "3000:80"
+    # 服务依赖：等待后端服务健康后再启动前端
+    # 确保前端启动时后端API已经可用
+    depends_on:
+      backend:
+        condition: service_healthy
+    # 网络配置：与后端服务在同一网络中
+    networks:
+      - techflow-network
+    # 重启策略：除非手动停止，否则总是重启
+    restart: unless-stopped
+
+# ================================
+# 网络配置
+# ================================
+networks:
+  # 自定义桥接网络，用于服务间通信
+  # 服务可以通过容器名称相互访问
+  techflow-network:
+    driver: bridge
+
+# ================================
+# 数据卷配置
+# ================================
+volumes:
+  # 本地数据卷，用于数据持久化
+  # 注意：当前配置中使用目录挂载，此卷定义备用
+  techflow-data:
+    driver: local

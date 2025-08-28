@@ -486,17 +486,9 @@ const Vocabulary: React.FC = () => {
 
   return (
     <Container maxWidth={false} sx={{ py: { xs: 2, md: 4 }, px: { xs: 1, md: 3 }, maxWidth: { xs: '100%', md: '1200px' }, mx: 'auto' }}>
-      {/* 页面标题和模式切换 */}
+      {/* 复习模式切换 */}
       <Box sx={{ mb: { xs: 3, md: 3 } }}>
-        <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', mb: 2 }}>
-          <Typography 
-            variant="h4" 
-            component="h1" 
-            sx={{ fontSize: { xs: '1.3rem', md: '1.5rem' }, fontWeight: 600 }}
-          >
-            单词本
-          </Typography>
-          
+        <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'flex-end', mb: 2 }}>
           {/* 复习模式切换按钮 */}
           <Box sx={{ display: 'flex', gap: 1 }}>
             <Button

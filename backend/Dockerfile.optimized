@@ -1,0 +1,82 @@
+# 后端 Dockerfile - 极致优化版本
+# 第一阶段：构建依赖
+FROM node:18-alpine AS dependencies
+
+WORKDIR /app
+
+# 复制 package.json 和 package-lock.json
+COPY package*.json ./
+
+# 安装所有依赖（包括开发依赖，用于构建）
+RUN npm ci --no-audit --no-fund --prefer-offline
+
+# 复制源代码和 Prisma schema
+COPY prisma ./prisma/
+COPY src ./src/
+COPY server.js ./
+
+# 生成 Prisma 客户端
+RUN npx prisma generate
+
+# 第二阶段：生产依赖
+FROM node:18-alpine AS production-deps
+
+WORKDIR /app
+
+# 复制 package.json
+COPY package*.json ./
+
+# 只安装生产依赖
+RUN npm ci --only=production --no-audit --no-fund --prefer-offline && \
+    npm cache clean --force
+
+# 第三阶段：最终运行时镜像 - 使用更小的基础镜像
+FROM node:18-alpine AS runtime
+
+# 安装必要的系统依赖（最小化）
+RUN apk add --no-cache sqlite dumb-init openssl && \
+    rm -rf /var/cache/apk/* /tmp/* /var/tmp/*
+
+WORKDIR /app
+
+# 创建非 root 用户
+RUN addgroup -g 1001 -S nodejs && \
+    adduser -S nodejs -u 1001
+
+# 从生产依赖阶段复制 node_modules（只复制必要的）
+COPY --from=production-deps /app/node_modules ./node_modules
+
+# 从构建阶段复制生成的 Prisma 客户端和源代码
+COPY --from=dependencies /app/node_modules/.prisma ./node_modules/.prisma
+COPY --from=dependencies /app/src ./src/
+COPY --from=dependencies /app/server.js ./
+COPY --from=dependencies /app/prisma ./prisma/
+
+# 复制启动脚本
+COPY start.sh ./start.sh
+
+# 创建数据目录并设置权限
+RUN mkdir -p /app/data && \
+    chmod +x /app/start.sh && \
+    chown -R nodejs:nodejs /app
+
+# 切换到非 root 用户
+USER nodejs
+
+# 暴露端口
+EXPOSE 3001
+
+# 设置环境变量
+ENV NODE_ENV=production \
+    PORT=3001 \
+    DATABASE_URL="file:/app/data/database.db"
+
+# 健康检查
+HEALTHCHECK --interval=30s --timeout=3s --start-period=5s --retries=3 \
+    CMD node -e "require('http').get('http://127.0.0.1:3001/health', (res) => { process.exit(res.statusCode === 200 ? 0 : 1) }).on('error', () => process.exit(1))"
+
+# 使用 dumb-init 作为 PID 1
+ENTRYPOINT ["dumb-init", "--"]
+
+# 启动应用
+CMD ["./start.sh"]
